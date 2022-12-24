@@ -1,9 +1,16 @@
 package com.udacity.project4.locationreminders.reminderslist
 
+import android.content.ContentValues.TAG
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import androidx.databinding.DataBindingUtil
+import androidx.lifecycle.Observer
+import com.firebase.ui.auth.AuthUI
+import com.google.android.material.snackbar.Snackbar
 import com.udacity.project4.R
+import com.udacity.project4.authentication.AuthenticationActivity
 import com.udacity.project4.base.BaseFragment
 import com.udacity.project4.base.NavigationCommand
 import com.udacity.project4.databinding.FragmentRemindersBinding
@@ -43,6 +50,20 @@ class ReminderListFragment : BaseFragment() {
         binding.addReminderFAB.setOnClickListener {
             navigateToAddReminder()
         }
+
+       binding.viewModel?.authenticationState?.observe(viewLifecycleOwner, Observer {authenticationState->
+         when (authenticationState) {
+             RemindersListViewModel.AuthenticationState.AUTHENTICATED -> Log.i(TAG, "successfully Authenticated")
+             RemindersListViewModel.AuthenticationState.UNAUTHENTICATED->{
+                 val intent= Intent(context,AuthenticationActivity::class.java)
+                 startActivity(intent)
+
+             }
+            else->Snackbar.make(view,requireActivity().getString(R.string.unsuccessful_login_message),Snackbar.LENGTH_LONG).show()
+         }
+
+
+         })
     }
 
     override fun onResume() {
@@ -71,7 +92,7 @@ class ReminderListFragment : BaseFragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.logout -> {
-//                TODO: add the logout implementation
+              AuthUI.getInstance().signOut(requireContext())
             }
         }
         return super.onOptionsItemSelected(item)
