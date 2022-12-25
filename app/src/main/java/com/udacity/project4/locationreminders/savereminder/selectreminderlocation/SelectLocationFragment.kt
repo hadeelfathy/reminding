@@ -172,7 +172,7 @@ class SelectLocationFragment : BaseFragment(),OnMapReadyCallback {
                   }.create().show()
 
         }else{ requestLocationPermission()}
-        
+
     }
 
 
