@@ -46,6 +46,8 @@
     <string name="error_adding_geofence">Error Happened, Can\'t Add Geofence</string>
     <string name="close">CLOSE</string>
     <string name="unsuccessful_login_message">unsuccessful login</string>
+    <string name="my_location">my Location</string>
+    <string name="location_permission">Location Permission</string>
 
 
 </resources>
