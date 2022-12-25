@@ -55,7 +55,7 @@ class RemindersActivityTest :
         return activity
     }
 
-    
+
 
 
     /**
