@@ -2,6 +2,7 @@ package com.udacity.project4.locationreminders.savereminder
 
 import android.Manifest
 import android.annotation.TargetApi
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
@@ -23,6 +24,8 @@ import com.udacity.project4.R
 import com.udacity.project4.base.BaseFragment
 import com.udacity.project4.base.NavigationCommand
 import com.udacity.project4.databinding.FragmentSaveReminderBinding
+import com.udacity.project4.locationreminders.geofence.GeofenceBroadcastReceiver
+import com.udacity.project4.locationreminders.geofence.GeofencingConstants
 import com.udacity.project4.locationreminders.reminderslist.ReminderDataItem
 import com.udacity.project4.utils.setDisplayHomeAsUpEnabled
 import org.koin.android.ext.android.inject
@@ -33,7 +36,13 @@ class SaveReminderFragment : BaseFragment() {
     private lateinit var binding: FragmentSaveReminderBinding
      private lateinit var reminderDataItem:ReminderDataItem
     private val runningQOrLater= android.os.Build.VERSION.SDK_INT>= android.os.Build.VERSION_CODES.Q
+    private lateinit var geofencingClient:GeofencingClient
 
+    private val geofencePendingIntent:PendingIntent by lazy {
+        val intent=Intent(requireContext(),GeofenceBroadcastReceiver::class.java)
+          intent.action= ACTION_GEOFENCE_EVENT
+           PendingIntent.getBroadcast(requireContext(),0,intent,PendingIntent.FLAG_UPDATE_CURRENT)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -60,16 +69,36 @@ class SaveReminderFragment : BaseFragment() {
 
         binding.saveReminder.setOnClickListener {
             val title = _viewModel.reminderTitle.value
-            val description = _viewModel.reminderDescription
+            val description = _viewModel.reminderDescription.value
             val location = _viewModel.reminderSelectedLocationStr.value
-            val latitude = _viewModel.latitude
+            val latitude = _viewModel.latitude.value
             val longitude = _viewModel.longitude.value
 
-//            TODO: use the user entered reminder details to:
+//             use the user entered reminder details to:
 //             1) add a geofencing request
 //             2) save the reminder to the local db
+             reminderDataItem= ReminderDataItem(title,description,location,latitude,longitude)
+              checkPermissionsAndStartGeofencing()
+
         }
     }
+
+    private fun checkPermissionsAndStartGeofencing(){
+        if (_viewModel.validateEnteredData(reminderDataItem))return
+        if (foregroundAndBackgroundLocationPermissionApproved()){
+              checkDeviceLocationSettingsAndStartGeofence()
+        }else{
+            requestForegroundAndBackgroundLocationPermissions()
+        }
+
+    }
+
+
+
+
+
+
+
 
     @TargetApi(29)
     private fun foregroundAndBackgroundLocationPermissionApproved(): Boolean {
@@ -183,7 +212,7 @@ class SaveReminderFragment : BaseFragment() {
                 currentGeofenceData.longitude!!,
                 GeofencingConstants.GEOFENCE_RADIUS_IN_METERS
             )
-            .setExpirationDuration(GeofencingConstants.GEOFENCE_EXPIRATION_IN_MILLISECONDS)
+            .setExpirationDuration(GeofencingConstants.NEVER_EXPIRING)
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
             .build()
 
@@ -193,7 +222,7 @@ class SaveReminderFragment : BaseFragment() {
             .build()
 
 
-                geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)?.run {
+                geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent).run {
                     addOnSuccessListener {
 
                         _viewModel.validateAndSaveReminder(reminderDataItem)
@@ -206,6 +235,12 @@ class SaveReminderFragment : BaseFragment() {
                 }
             }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_TURN_DEVICE_LOCATION_ON) {
+            checkDeviceLocationSettingsAndStartGeofence(false)
+        }
+    }
 
 
 
